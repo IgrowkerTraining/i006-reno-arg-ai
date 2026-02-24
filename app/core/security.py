@@ -1,3 +1,4 @@
+<<<<<<< HEAD
 """Security utilities for the application."""
 
 from passlib.context import CryptContext
@@ -22,3 +23,17 @@ def mask_api_key(api_key: str) -> str:
     if not api_key or len(api_key) < 8:
         return "***"
     return f"{api_key[:4]}...{api_key[-4:]}"
+=======
+from passlib.context import CryptContext
+
+# Configuramos el algoritmo de encriptación (bcrypt)
+pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
+
+def get_password_hash(password: str) -> str:
+    """Convierte texto plano en un hash seguro."""
+    return pwd_context.hash(password)
+
+def verify_password(plain_password: str, hashed_password: str) -> bool:
+    """Verifica si la clave ingresada coincide con el hash guardado."""
+    return pwd_context.verify(plain_password, hashed_password)
+>>>>>>> fuente_api/main

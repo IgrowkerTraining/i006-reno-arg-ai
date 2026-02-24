@@ -1,3 +1,4 @@
+<<<<<<< HEAD
 """Logging configuration for the application."""
 
 import logging
@@ -34,3 +35,23 @@ def setup_logging() -> None:
 def get_logger(name: Optional[str] = None) -> logging.Logger:
     """Get a logger instance."""
     return logging.getLogger(name or __name__)
+=======
+import logging
+import sys
+from app.config.settings import settings
+
+def setup_logging():
+    # Eliminamos configuraciones previas para evitar duplicidad
+    logging.root.handlers = []
+    
+    logging.basicConfig(
+        level=settings.LOGGING_LEVEL, # Nivel dinámico desde el .env
+        format="%(asctime)s - %(name)s - %(levelname)s - %(message)s",
+        handlers=[
+            logging.StreamHandler(sys.stdout)
+        ],
+    )
+
+# Logger para usar en el resto de la aplicación
+logger = logging.getLogger("app")
+>>>>>>> fuente_api/main

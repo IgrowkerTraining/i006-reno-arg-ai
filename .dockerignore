@@ -1,48 +1,53 @@
-# Git
+# --- Git ---
 .git
 .gitignore
 
-# Python
-__pycache__
+# --- Python ---
+__pycache__/
 *.pyc
 *.pyo
 *.pyd
 .Python
-env
 pip-log.txt
 pip-delete-this-directory.txt
 .tox
 .coverage
 .coverage.*
-.cache
+.cache/
 nosetests.xml
 coverage.xml
 *.cover
 *.log
-.git
-.mypy_cache
-.pytest_cache
-.hypothesis
+.mypy_cache/
+.pytest_cache/
+.hypothesis/
+.ruff_cache/
 
-# Virtual environments
-.venv
+# --- Entornos Virtuales ---
+.venv/
 venv/
 ENV/
 env/
+build/
+dist/
+*.egg-info/
 
-# Environment variables
+# --- Variables de Entorno (¡Seguridad!) ---
+# No queremos que tus API Keys de OpenRouter se filtren en la imagen
 .env
 .env.local
 .env.*.local
+env.example
 
-# IDE
+# --- IDEs y Herramientas ---
 .vscode/
 .idea/
 *.swp
 *.swo
 *~
+.devcontainer/
 
-# OS
+# --- OS ---
 .DS_Store
 .DS_Store?
 ._*
@@ -51,18 +56,15 @@ env/
 ehthumbs.db
 Thumbs.db
 
-# Documentation
-README.md
-*.md
+# --- Documentación ---
+# Se comenta README.md porque pyproject.toml lo necesita para construir el paquete
+# README.md
 
-# Tests
+# --- Tests ---
 tests/
-test_*
+test_*.py
 
-# Development files (keep requirements.txt and pyproject.toml for Docker)
-env.example
-
-# Docker
+# --- Docker ---
 Dockerfile
 .dockerignore
 docker-compose*.yml
