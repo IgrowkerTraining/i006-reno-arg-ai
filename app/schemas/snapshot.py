@@ -1,3 +1,4 @@
+"""Schema principal SnapshotCreate + validadores."""
 
 from pydantic import BaseModel, Field, field_validator, model_validator
 from typing import List
@@ -60,12 +61,8 @@ class ValidacionTecnica(BaseModel):
     responsable: str
 
 
-class DatoAvanceBase(BaseModel):
-    fecha_registro: date
-    etapa_nombre: str
-    porcentaje_avance: float = Field(..., ge=0, le=100)
-    tareas_principales: List[str]
-    oficios_activos: List[str]
+class SnapshotCreate(BaseModel):
+    """Snapshot de proyecto para análisis IA."""
 
     project: Project
     periodo: Periodo
