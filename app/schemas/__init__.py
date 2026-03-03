@@ -1,15 +1,14 @@
-from .analisis import AnalisisCreate, AnalisisOut
-from .snapshot import SnapshotInput
-from .results import ResultadoAnalisisOut, ObservacionOut
-from .enums import EstadoAnalisis, CategoriaObservacion, NivelObservacion
+"""Exporta todos los schemas principales."""
+
+from .enums import EstadoEtapa, NivelRiesgo
+from .snapshot import SnapshotCreate
+from .responses import AnalisisResultado, SnapshotResponse
+from .nested import (
+    ProyectoData, EtapaData, AvanceData, MedidaSeguridad
+)
 
 __all__ = [
-    "AnalisisCreate",
-    "AnalisisOut",
-    "SnapshotInput",
-    "ResultadoAnalisisOut",
-    "ObservacionOut",
-    "EstadoAnalisis",
-    "CategoriaObservacion",
-    "NivelObservacion"
+    "SnapshotCreate", "AnalisisResultado", "SnapshotResponse",
+    "ProyectoData", "EtapaData", "AvanceData", "MedidaSeguridad",
+    "EstadoEtapa", "NivelRiesgo"
 ]
