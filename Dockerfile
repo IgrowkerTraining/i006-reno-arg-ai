@@ -1,40 +1,62 @@
-# Use Python 3.11 slim image for smaller size
-FROM python:3.11-slim
+# --- Etapa 1: Constructor (Build) ---
+FROM python:3.12-slim AS builder
 
-# Set environment variables
-ENV PYTHONUNBUFFERED=1 \
-    PYTHONDONTWRITEBYTECODE=1 \
-    PIP_NO_CACHE_DIR=1 \
-    PIP_DISABLE_PIP_VERSION_CHECK=1
+# Instalar uv directamente desde el binario oficial
+COPY --from=ghcr.io/astral-sh/uv:latest /uv /uvx /bin/
 
-# Set work directory
-WORKDIR /app
-
-# Install system dependencies
-RUN apt-get update && apt-get install -y \
-    curl \
+# Instalar dependencias necesarias para compilar librerías de C (como psycopg2)
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    gcc \
+    libpq-dev \
     && rm -rf /var/lib/apt/lists/*
 
-# Copy requirements first for better Docker layer caching
-COPY requirements.txt ./
+WORKDIR /app
 
-# Install dependencies using pip (more reliable for Docker builds)
-RUN pip install --no-cache-dir -r requirements.txt
+# Optimizamos caché: copiar archivos de dependencias primero
+COPY pyproject.toml uv.lock ./
 
-# Copy the rest of the application code
+# Sincronizamos dependencias (crea .venv)
+# --no-dev para no incluir librerías de testing en la imagen final
+RUN uv sync --frozen --no-install-project --no-dev
+
+
+# --- Etapa 2: Ejecución (Runtime) ---
+FROM python:3.12-slim
+
+# Variables de entorno
+ENV PYTHONUNBUFFERED=1 \
+    PYTHONDONTWRITEBYTECODE=1 \
+    PYTHONPATH=/app \
+    PATH="/app/.venv/bin:$PATH"
+
+WORKDIR /app
+
+# Instalamos solo las librerías de sistema mínimas para ejecución
+# libpq5 es necesaria para que el driver de Postgres funcione
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    curl \
+    libpq5 \
+    && rm -rf /var/lib/apt/lists/*
+
+# Copiar el entorno virtual desde el builder
+COPY --from=builder /app/.venv /app/.venv
+
+# Copiar el código del proyecto
+# Importante: Esto copia la carpeta app/ y el archivo main.py
 COPY . .
 
-# Create non-root user for security
+# Seguridad: Usuario no-root
 RUN adduser --disabled-password --gecos '' appuser && \
     chown -R appuser:appuser /app
 USER appuser
 
-# Expose port
+# Exponer el puerto de FastAPI
 EXPOSE 8000
 
-# Health check (updated to new API path)
-HEALTHCHECK --interval=30s --timeout=30s --start-period=5s --retries=3 \
-    CMD curl -f http://localhost:8000/api/v1/health || exit 1
+# Healthcheck (Ajustado a la ruta que definimos en main.py)
+HEALTHCHECK --interval=30s --timeout=5s --start-period=10s --retries=3 \
+    CMD curl -f http://localhost:8000/health || exit 1
 
-# Run the application using python directly
-CMD ["python", "main.py"]
+# Comando de ejecución
+# Comando por defecto (será sobrescrito por docker-compose para incluir el sync)
+CMD ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8000"]

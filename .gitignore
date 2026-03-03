@@ -1,25 +1,25 @@
-# Virtual environments
-*venv/
-*env/
-ENV/
+# --- Entornos Virtuales (¡Muy importante!) ---
+venv/
 .venv/
+env/
+.env/
+ENV/
 .ENV/
+env.bak/
+venv.bak/
 
-# uv package manager
+# --- uv package manager ---
 .uv-cache/
 
-# Python compiled files
+# --- Archivos compilados de Python ---
 *.pyc
 *.pyo
+*.pyc
 *.pyd
 __pycache__/
-.pytest_cache/
-.coverage
-.mypy_cache/
-.hypothesis/
-.tox/
 
-# Environment files (keep env.example)
+# --- Archivos de entorno y secretos (¡Seguridad!) ---
+# Ignoramos todos los .env excepto .env.example
 .env
 .env.*
 !.env.example
@@ -28,8 +28,13 @@ __pycache__/
 .env.production.local
 .env.test
 .env.test.local
+secrets.json
+.secret_key
+*.pem
+*.key
+*.crt
 
-# IDE and editor files
+# --- IDEs y Editores ---
 .idea/
 .vscode/
 *.sublime-project
@@ -37,8 +42,9 @@ __pycache__/
 *.swp
 *.swo
 *~
+.history/
 
-# OS generated files
+# --- Archivos del Sistema Operativo ---
 .DS_Store
 .DS_Store?
 ._*
@@ -48,95 +54,74 @@ ehthumbs.db
 Thumbs.db
 .desktop.ini
 
-# Logs and runtime files
+# --- Logs y archivos de ejecución ---
 *.log
 *.out
 *.bin
 logs/
 
-# Database files
+# --- Bases de datos ---
+# Si usas PostgreSQL con Docker, estos suelen no ser necesarios,
+# pero se mantienen por seguridad.
 *.db
 *.sqlite3
 *.sqlite
 
-# Dependency lock files
+# --- Archivos de bloqueo de dependencias ---
 Pipfile.lock
 poetry.lock
 uv.lock
 
-# Cache and temporary files
+# --- Caché y archivos temporales ---
 .cache/
+.pytest_cache/
+.mypy_cache/
+.hypothesis/
+.tox/
+.ruff_cache/
 *.tmp
 *.temp
 *.pid
 *.seed
 *.pid.lock
 
-# Static and media files
+# --- Archivos estáticos y media (para frameworks web) ---
 staticfiles/
 media/
 uploads/
 
-# Node.js (if used)
+# --- Node.js (por si acaso usas frontend) ---
 node_modules/
 npm-debug.log*
 yarn-debug.log*
 yarn-error.log*
 .pnpm-debug.log*
-.yarn-integrity
 
-# Security and secrets
-secrets.json
-.secret_key
-*.pem
-*.key
-*.crt
-*.p12
-
-# Testing
+# --- Testing ---
+.coverage
 .coverage.*
 htmlcov/
-.pytest_cache/
 test-results/
 coverage.xml
 
-# Build and distribution
+# --- Build y Distribución ---
 build/
 dist/
 *.egg-info/
 *.whl
 *.tar.gz
 
-# Jupyter Notebook
+# --- Otros ---
 .ipynb_checkpoints
-
-# pyenv
 .python-version
-
-# pipenv
-Pipfile
-
-# PEP 582
 __pypackages__/
-
-# Celery
 celerybeat-schedule
 celerybeat.pid
-
-# SageMath parsed files
 *.sage.py
-
-# Spyder project settings
 .spyderproject
 .spyproject
-
-# Rope project settings
 .ropeproject
-
-# mkdocs documentation
 /site
-
-# Backup files
 *.bak
 *.backup
 *.old
