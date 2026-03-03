@@ -1,3 +1,4 @@
+<<<<<<< HEAD
 from app.db import Base, engine
 # Importar todos los modelos para que Base.metadata los registre
 from .enums import EstadoAnalisis, CategoriaObservacion, NivelObservacion
@@ -39,3 +40,6 @@ __all__ = [
     "init_db",
     "drop_all"
 ]
+=======
+"""Data models for the application."""
+>>>>>>> origin/develop
