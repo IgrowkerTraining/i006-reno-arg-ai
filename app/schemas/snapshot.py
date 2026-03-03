@@ -1,22 +1,64 @@
-from pydantic import BaseModel, Field
+
+from pydantic import BaseModel, Field, field_validator, model_validator
+from typing import List
 from datetime import date
-from typing import List, Optional, Any
+from enum import Enum
+import re
 
-class DatoProyectoBase(BaseModel):
-    proyecto_nombre: str = Field(..., example="Edificio RENO I")
-    ubicacion: str
-    tipo_intervencion: str
-    superficie_m2: float = Field(..., gt=0)
-    sistema_constructivo: str
-    responsable_tecnico_nombre: str
-    fecha_inicio: date
+class EstadoEtapa(str, Enum):
+    EN_CURSO = "EN_CURSO"
+    FINALIZADA = "FINALIZADA"
+    PENDIENTE = "PENDIENTE"
 
-class DatoEtapaBase(BaseModel):
-    etapa_nombre: str
-    etapa_orden: int
-    fecha_inicio_estimada: Optional[date] = None
-    fecha_fin_estimada: Optional[date] = None
-    estado: str
+
+class Project(BaseModel):
+    codigo: str = Field(..., min_length=5)
+    nombre: str
+    responsable_tecnico: str
+
+
+class Periodo(BaseModel):
+    desde: date
+    hasta: date
+
+    @model_validator(mode="after")
+    def validar_rango_fechas(self):
+        if self.hasta < self.desde:
+            raise ValueError("La fecha 'hasta' no puede ser anterior a 'desde'")
+        return self
+
+
+class Etapa(BaseModel):
+    nombre: str
+    estado: EstadoEtapa
+    avance_estimado: int = Field(ge=0, le=100)
+
+
+class RegistroAvance(BaseModel):
+    fecha: date
+    supervisor: str
+    tareas_ejecutadas: List[str]
+    oficios_activos: List[str]
+    porcentaje_avance: int = Field(ge=0, le=100)
+
+
+class CoberturaART(BaseModel):
+    entidad: str
+    vigencia: str
+
+
+class MedidasSeguridad(BaseModel):
+    fecha: date
+    implementadas: List[str]
+    cobertura_art: CoberturaART
+
+
+class ValidacionTecnica(BaseModel):
+    fecha: date
+    estado: EstadoEtapa
+    etapa: str
+    responsable: str
+
 
 class DatoAvanceBase(BaseModel):
     fecha_registro: date
@@ -25,13 +67,17 @@ class DatoAvanceBase(BaseModel):
     tareas_principales: List[str]
     oficios_activos: List[str]
 
-class SnapshotInput(BaseModel):
-    """Esquema de entrada para el snapshot completo"""
-    proyecto: DatoProyectoBase
-    etapas: List[DatoEtapaBase]
-    avances: List[DatoAvanceBase]
-    seguridad_higiene: List[Any]  # Se puede detallar más según necesidad
-    validaciones_tecnicas: List[Any]
+    project: Project
+    periodo: Periodo
+    etapas: Etapa
+    registros_avance: RegistroAvance
+    medidas_seguridad: MedidasSeguridad
+    validaciones_tecnicas: ValidacionTecnica
 
-    class Config:
-        from_attributes = True
+    @field_validator("project")
+    @classmethod
+    def validar_codigo_proyecto(cls, value):
+        patron = r"^[A-Z]+-[A-Z]{2}-\d{4}-\d{3}$"
+        if not re.match(patron, value.codigo):
+            raise ValueError("Formato de código de proyecto inválido")
+        return value
