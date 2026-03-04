@@ -13,7 +13,8 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
 WORKDIR /app
 
 # Optimizamos caché: copiar archivos de dependencias primero
-COPY pyproject.toml uv.lock ./
+# COPY pyproject.toml uv.lock ./
+COPY pyproject.toml ./
 
 # Sincronizamos dependencias (crea .venv)
 # --no-dev para no incluir librerías de testing en la imagen final
