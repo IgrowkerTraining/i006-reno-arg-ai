@@ -48,6 +48,8 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
 # Importante: Esto copia la carpeta app/ y el archivo main.py
 COPY . .
 
+RUN pip install --no-cache-dir .
+
 # Seguridad: Usuario no-root
 RUN adduser --disabled-password --gecos '' appuser && \
     chown -R appuser:appuser /app
