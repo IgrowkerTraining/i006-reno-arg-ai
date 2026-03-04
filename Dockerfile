@@ -42,7 +42,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     && rm -rf /var/lib/apt/lists/*
 
 # Copiar el entorno virtual desde el builder
-COPY --from=builder /app/.venv /app/.venv
+#COPY --from=builder /app/.venv /app/.venv
 
 # Copiar el código del proyecto
 # Importante: Esto copia la carpeta app/ y el archivo main.py
