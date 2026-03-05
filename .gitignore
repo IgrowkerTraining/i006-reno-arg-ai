@@ -1,127 +1,112 @@
-# --- Entornos Virtuales (¡Muy importante!) ---
+# =============================================================================
+# RENO Studio AI - .gitignore Profesional Unificado
+# =============================================================================
+
+# --- Entornos Virtuales (Aislamiento de dependencias) ---
 venv/
 .venv/
 env/
 .env/
 ENV/
-.ENV/
-env.bak/
-venv.bak/
+bin/
+lib/
+develop-eggs/
+downloads/
+eggs/
+.installed.cfg
+parts/
+sdist/
+var/
+wheels/
+share/python-wheels/
 
-# --- uv package manager ---
-.uv-cache/
-
-# --- Archivos compilados de Python ---
-*.pyc
-*.pyo
-*.pyc
-*.pyd
+# --- Python: Archivos compilados y Caché ---
 __pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.installed.cfg
+lib/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+share/python-wheels/
+*.egg-info/
+.installed.cfg
+*.egg
+MANIFEST
 
-# --- Archivos de entorno y secretos (¡Seguridad!) ---
-# Ignoramos todos los .env excepto .env.example
+# --- Seguridad y Secretos (¡CRÍTICO!) ---
+# Ignoramos todos los archivos de entorno
 .env
 .env.*
-!.env.example
 .env.local
 .env.production
-.env.production.local
 .env.test
-.env.test.local
+# PERMITIMOS el ejemplo para que otros sepan qué variables configurar
+!.env.example
 secrets.json
-.secret_key
 *.pem
 *.key
 *.crt
+.secret_key
 
-# --- IDEs y Editores ---
-.idea/
-.vscode/
-*.sublime-project
-*.sublime-workspace
-*.swp
-*.swo
-*~
-.history/
-
-# --- Archivos del Sistema Operativo ---
-.DS_Store
-.DS_Store?
-._*
-.Spotlight-V100
-.Trashes
-ehthumbs.db
-Thumbs.db
-.desktop.ini
-
-# --- Logs y archivos de ejecución ---
-*.log
-*.out
-*.bin
-logs/
-
-# --- Bases de datos ---
-# Si usas PostgreSQL con Docker, estos suelen no ser necesarios,
-# pero se mantienen por seguridad.
+# --- Infraestructura y Bases de Datos (Docker) ---
+# Ignoramos la carpeta donde Postgres guarda los datos reales
+postgres_data/
 *.db
 *.sqlite3
 *.sqlite
+# Si usas Redis o similares
+dump.rdb
 
-# --- Archivos de bloqueo de dependencias ---
-Pipfile.lock
-poetry.lock
-uv.lock
+# --- IDEs y Editores de Código ---
+.vscode/
+.idea/
+*.swp
+*.swo
+.history/
+*.sublime-project
+*.sublime-workspace
 
-# --- Caché y archivos temporales ---
-.cache/
-.pytest_cache/
-.mypy_cache/
-.hypothesis/
-.tox/
-.ruff_cache/
+# --- Logs y Archivos Temporales ---
+*.log
+logs/
+*.out
 *.tmp
 *.temp
 *.pid
-*.seed
 *.pid.lock
 
-# --- Archivos estáticos y media (para frameworks web) ---
-staticfiles/
-media/
-uploads/
-
-# --- Node.js (por si acaso usas frontend) ---
-node_modules/
-npm-debug.log*
-yarn-debug.log*
-yarn-error.log*
-.pnpm-debug.log*
-
-# --- Testing ---
+# --- Testing y Calidad de Código ---
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
 .coverage
 .coverage.*
 htmlcov/
 test-results/
 coverage.xml
+.tox/
+.nox/
 
-# --- Build y Distribución ---
-build/
-dist/
-*.egg-info/
-*.whl
-*.tar.gz
+# --- Archivos de Sistema (Basura de SO) ---
+.DS_Store
+.DS_Store?
+._*
+Thumbs.db
+ehthumbs.db
+desktop.ini
 
-# --- Otros ---
-.ipynb_checkpoints
-.python-version
-__pypackages__/
-celerybeat-schedule
-celerybeat.pid
-*.sage.py
-.spyderproject
-.spyproject
-.ropeproject
-/site
-*.bak
-*.backup
-*.old
+# --- Herramientas de empaquetado (uv, poetry, pip) ---
+.uv-cache/
+pip-log.txt
+pip-delete-this-directory.txt

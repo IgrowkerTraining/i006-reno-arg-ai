@@ -1,14 +1,5 @@
-"""Exporta todos los schemas principales."""
+from .audit_request import ConstructionPayload
+from .audit_response import AnalisisResponse
+from .project import ProyectoBase
 
-from .enums import EstadoEtapa, NivelRiesgo
-from .snapshot import SnapshotCreate
-from .responses import AnalisisResultado, SnapshotResponse
-from .nested import (
-    ProyectoData, EtapaData, AvanceData, MedidaSeguridad
-)
-
-__all__ = [
-    "SnapshotCreate", "AnalisisResultado", "SnapshotResponse",
-    "ProyectoData", "EtapaData", "AvanceData", "MedidaSeguridad",
-    "EstadoEtapa", "NivelRiesgo"
-]
+__all__ = ["ConstructionPayload", "AnalisisResponse", "ProyectoBase"]

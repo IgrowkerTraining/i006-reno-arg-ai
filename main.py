@@ -1,81 +1,77 @@
-"""Main FastAPI application."""
+import uvicorn
+from fastapi import FastAPI, Depends, HTTPException, status
+from sqlalchemy.orm import Session
 
-from contextlib import asynccontextmanager
+# 1. Importaciones de Infraestructura y Configuración
+from app.core.database import engine, get_db, Base
+from app.core.config import settings
 
-from fastapi import FastAPI
-from fastapi.middleware.cors import CORSMiddleware
+# 2. Importaciones de Esquemas (Contratos de API)
+from app.schemas import ConstructionPayload, AnalisisResponse
 
-from app.config.settings import settings
-from app.core.logging import setup_logging, get_logger
-from app.api.v1 import api_router
-from app.models.schemas import RootResponse
-from app.services.ai_service import ai_service
+# 3. Importaciones de Lógica de Negocio (Modularizada)
+from app.services import AuditService, AIService
+from app.repositories import UnitOfWork
 
-# Setup logging
-setup_logging()
-logger = get_logger(__name__)
+# Crear las tablas en la base de datos al iniciar (Opcional si usas Alembic)
+Base.metadata.create_all(bind=engine)
 
-
-@asynccontextmanager
-async def lifespan(app: FastAPI):
-    """Application lifespan manager."""
-    # Startup
-    logger.info(f"Starting {settings.app_name} v{settings.app_version}")
-    yield
-    # Shutdown
-    await ai_service.close()
-    logger.info("Application shutdown complete")
-
-
-# Create FastAPI application
 app = FastAPI(
-    title=settings.app_name,
-    version=settings.app_version,
-    description="FastAPI template with OpenRouter AI integration",
-    lifespan=lifespan,
-    docs_url="/docs",
-    redoc_url="/redoc",
-    openapi_url="/openapi.json"
+    title="RENO Studio AI - Construction Audit",
+    description="API modularizada para auditoría técnica de obras civiles.",
+    version="1.0.0"
 )
 
-# Add CORS middleware
-app.add_middleware(
-    CORSMiddleware,
-    allow_origins=settings.cors_origins,
-    allow_credentials=settings.cors_allow_credentials,
-    allow_methods=settings.cors_allow_methods,
-    allow_headers=settings.cors_allow_headers,
+# --- Inyección de Dependencias ---
+
+# Instanciamos el servicio de IA una sola vez (Singleton) para optimizar recursos
+ai_client = AIService()
+
+def get_audit_service(db: Session = Depends(get_db)) -> AuditService:
+    """
+    Fabrica el servicio de auditoría inyectando el Unit of Work 
+    y el cliente de IA pre-configurado.
+    """
+    uow = UnitOfWork(db)
+    return AuditService(uow, ai_client)
+
+# --- Endpoints ---
+
+@app.post(
+    "/v1/analisis/procesar", 
+    response_model=AnalisisResponse, 
+    status_code=status.HTTP_201_CREATED,
+    tags=["Auditoría"]
 )
+async def create_analysis(
+    payload: ConstructionPayload, 
+    service: AuditService = Depends(get_audit_service)
+):
+    """
+    Endpoint principal para procesar una auditoría de obra.
+    Delega toda la lógica de negocio al Service Layer.
+    """
+    try:
+        analisis_id, informe = await service.ejecutar_proceso_completo(payload)
+        
+        return {
+            "analisis_id": analisis_id,
+            "status": "COMPLETADO",
+            "proyecto_codigo": payload.project.codigo,
+            "resultado": informe
+        }
+    except Exception as e:
+        # El error ya fue registrado en la DB por el Service antes de lanzar la excepción
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, 
+            detail=f"Error interno en el procesamiento: {str(e)}"
+        )
 
-# Include API routers
-app.include_router(api_router)
+@app.get("/health", tags=["Sistema"])
+def health_check():
+    return {"status": "ok", "database": "connected"}
 
-
-@app.get("/", response_model=RootResponse)
-async def read_root():
-    """Root endpoint with basic information."""
-    return RootResponse(
-        message=f"Welcome to {settings.app_name}",
-        version=settings.app_version,
-        docs="/docs",
-        health="/api/v1/health"
-    )
-
-
-# Legacy endpoint for backward compatibility
-@app.get("/items/{item_id}")
-async def read_item(item_id: int, q: str | None = None):
-    """Example endpoint from original template."""
-    return {"item_id": item_id, "q": q}
-
+# --- Ejecución ---
 
 if __name__ == "__main__":
-    import uvicorn
-    
-    uvicorn.run(
-        "main:app",
-        host=settings.api_host,
-        port=settings.api_port,
-        reload=settings.debug,
-        log_level=settings.log_level.lower()
-    )
+    uvicorn.run("main:app", host="0.0.0.0", port=8000, reload=True)

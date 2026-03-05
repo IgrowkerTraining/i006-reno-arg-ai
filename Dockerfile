@@ -1,10 +1,10 @@
-# --- Etapa 1: Constructor (Build) ---
+# --- Etapa 1: Build (Construcción) ---
 FROM python:3.12-slim AS builder
 
-# Instalar uv directamente desde el binario oficial
+# Instalamos uv desde la imagen oficial
 COPY --from=ghcr.io/astral-sh/uv:latest /uv /uvx /bin/
 
-# Instalar dependencias necesarias para compilar librerías de C (como psycopg2)
+# Instalamos dependencias del sistema necesarias para compilar (gcc, libpq para postgres)
 RUN apt-get update && apt-get install -y --no-install-recommends \
     gcc \
     libpq-dev \
@@ -12,56 +12,48 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
 
 WORKDIR /app
 
-# RUN uv lock
+# Copiamos el archivo de configuración y el readme (con asterisco por si no existe)
+COPY pyproject.toml README.m* ./
 
-# # Optimizamos caché: copiar archivos de dependencias primero
-# COPY pyproject.toml uv.lock ./
-#COPY pyproject.toml ./
+# Truco: Creamos un README vacío si el COPY no encontró ninguno 
+# Esto evita que el build de 'hatchling' falle
+RUN touch README.md
 
-# # Sincronizamos dependencias (crea .venv)
-# # --no-dev para no incluir librerías de testing en la imagen final
-# RUN uv sync --frozen --no-install-project --no-dev
+# Creamos el entorno virtual en una ruta fija fuera de /app
+# Instalamos las dependencias usando el pyproject.toml directamente
+RUN uv venv /opt/venv && \
+    uv pip install --no-cache --python /opt/venv/bin/python .
 
-
-# --- Etapa 2: Ejecución (Runtime) ---
+# --- Etapa 2: Runtime (Ejecución) ---
 FROM python:3.12-slim
-
-# Variables de entorno
-ENV PYTHONUNBUFFERED=1 \
-    PYTHONDONTWRITEBYTECODE=1 \
-    PYTHONPATH=/app \
-    PATH="/app/.venv/bin:$PATH"
 
 WORKDIR /app
 
-# Instalamos solo las librerías de sistema mínimas para ejecución
-# libpq5 es necesaria para que el driver de Postgres funcione
+# Configuramos las rutas para que Python y el Sistema encuentren el venv y tu código
+ENV PATH="/opt/venv/bin:$PATH" \
+    PYTHONPATH="/app" \
+    PYTHONUNBUFFERED=1
+
+# Instalamos solo las librerías de ejecución (libpq5 para que funcione la DB)
 RUN apt-get update && apt-get install -y --no-install-recommends \
-    curl \
     libpq5 \
+    curl \
     && rm -rf /var/lib/apt/lists/*
 
-# Copiar el entorno virtual desde el builder
-#COPY --from=builder /app/.venv /app/.venv
+# Copiamos el entorno virtual ya preparado desde la etapa anterior
+COPY --from=builder /opt/venv /opt/venv
 
-# Copiar el código del proyecto
-# Importante: Esto copia la carpeta app/ y el archivo main.py
+# Copiamos todo tu código fuente al contenedor
 COPY . .
 
-RUN pip install --no-cache-dir .
-
-# Seguridad: Usuario no-root
+# Seguridad: Creamos un usuario que no sea root para correr la app
 RUN adduser --disabled-password --gecos '' appuser && \
     chown -R appuser:appuser /app
 USER appuser
 
-# Exponer el puerto de FastAPI
 EXPOSE 8000
 
-# Healthcheck (Ajustado a la ruta que definimos en main.py)
-HEALTHCHECK --interval=30s --timeout=5s --start-period=10s --retries=3 \
-    CMD curl -f http://localhost:8000/health || exit 1
-
-# Comando de ejecución
-# Comando por defecto (será sobrescrito por docker-compose para incluir el sync)
-CMD ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8000"]
+# El comando de arranque:
+# 'app.main:app' asume que tienes una carpeta 'app' y dentro 'main.py'
+# Si tu archivo main.py está en la raíz, cámbialo a "main:app"
+CMD ["uvicorn", "main:app", "--host", "0.0.0.0", "--port", "8000"]

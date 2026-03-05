@@ -1,0 +1,55 @@
+services:
+  # --- Base de Datos (Persistencia) ---
+  db:
+    image: postgres:15-alpine
+    container_name: reno_db
+    restart: always
+    environment:
+      POSTGRES_USER: ${DB_USER:-postgres}
+      POSTGRES_PASSWORD: ${DB_PASSWORD:-password}
+      POSTGRES_DB: ${DB_NAME:-reno_studio}
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${DB_USER:-postgres} -d ${DB_NAME:-reno_studio}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # --- API FastAPI (Lógica de Negocio e IA) ---
+  api:
+    build: 
+      context: .
+      dockerfile: Dockerfile
+    container_name: reno_api
+    restart: unless-stopped
+    depends_on:
+      db:
+        condition: service_healthy
+    env_file:
+      - .env
+    environment:
+      # Conexión automática a la DB interna
+      - DATABASE_URL=postgresql://${DB_USER:-postgres}:${DB_PASSWORD:-password}@db:5432/${DB_NAME:-reno_studio}
+      # Variables de IA del primer código (con valores por defecto)
+      - OPENROUTER_API_KEY=${OPENROUTER_API_KEY}
+      - OPENROUTER_BASE_URL=${OPENROUTER_BASE_URL:-https://openrouter.ai/api/v1}
+      - APP_NAME=${APP_NAME:-Reno AI API}
+      - APP_VERSION=${APP_VERSION:-1.0.0}
+      - DEBUG=${DEBUG:-false}
+    ports:
+      - "8000:8000"
+    volumes:
+      - ./logs:/app/logs
+      - .:/app  # Opcional: para desarrollo en vivo (hot-reload)
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 20s
+
+volumes:
+  postgres_data:
