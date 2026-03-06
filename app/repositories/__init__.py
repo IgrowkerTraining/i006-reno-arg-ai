@@ -1,7 +1,8 @@
+from sqlalchemy.orm import Session  # FIX: importación faltante
+
 from .audit_repository import AuditRepository
 from .snapshot_repository import SnapshotRepository
 from .llm_repository import LLMRepository
-from sqlalchemy.orm import Session
 
 class UnitOfWork:
     """Contenedor para agrupar repositorios bajo una misma transacción"""
