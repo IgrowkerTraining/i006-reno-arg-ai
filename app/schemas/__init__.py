@@ -1,5 +1,5 @@
-from .audit_request import ConstructionPayload
-from .audit_response import AnalisisResponse
-from .project import ProyectoBase
+from .response_schema import AnalisisResponse
+from .body_schema import BodyBase
+from .prompt_schema import PromptSchema
 
-__all__ = ["ConstructionPayload", "AnalisisResponse", "ProyectoBase"]
+__all__ = [ "AnalisisResponse", "BodyBase", "PromptSchema"]

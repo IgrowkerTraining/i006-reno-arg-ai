@@ -1,5 +1,3 @@
-import json  # FIX: importación necesaria para serializar el informe
-
 from sqlalchemy.orm import Session
 from app.models import InvocacionLLM, ResultadoAnalisis
 
@@ -13,11 +11,12 @@ class LLMRepository:
             modelo_usado=meta['m'],
             tokens_prompt=meta['tp'],
             tokens_respuesta=meta['tr'],
-            exitosa=True
+            exitosa=True,
+            prompt_enviado=meta.get('prompt')  # ← 1. faltaba este campo
         )
         res = ResultadoAnalisis(
             analisis_id=analisis_id,
-            resumen_general=json.dumps(informe, ensure_ascii=False)  # FIX: dict → string
+            datos_informe=informe  # ← 2. era resumen_general / 3. sin json.dumps
         )
         self.db.add(inv)
         self.db.add(res)

@@ -1,7 +1,7 @@
-from .enums import EstadoAnalisis
-from .audit import Analisis
-from .snapshot import SnapshotRecibido
-from .llm import InvocacionLLM, ResultadoAnalisis
+from .enums_model import EstadoAnalisis
+from .audit_model import Analisis
+from .snapshot_model import SnapshotRecibido
+from .llm_model import InvocacionLLM, ResultadoAnalisis
 
 __all__ = [
     "EstadoAnalisis",

@@ -10,6 +10,7 @@ class InvocacionLLM(Base):
     tokens_prompt = Column(Integer)
     tokens_respuesta = Column(Integer)
     exitosa = Column(Boolean)
+    prompt_enviado = Column(JSON, nullable=True)
 
 class ResultadoAnalisis(Base):
     __tablename__ = "resultados_analisis"

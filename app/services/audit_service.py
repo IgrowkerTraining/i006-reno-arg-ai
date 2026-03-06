@@ -1,6 +1,7 @@
+import re
 import json
-import uuid
 from datetime import datetime
+from app.models import EstadoAnalisis
 from app.repositories import UnitOfWork
 from .ai_service import AIService
 
@@ -12,31 +13,41 @@ class AuditService:
     async def ejecutar_proceso_completo(self, payload):
         # 1. Registro inicial
         analisis = self.uow.audits.crear(
-            payload.project.codigo, payload.periodo["desde"], payload.periodo["hasta"]
+            payload.project.codigo,
+            payload.periodo.desde,
+            payload.periodo.hasta
         )
         payload_data = payload.model_dump(mode='json')
         self.uow.snapshots.guardar(analisis.id, payload_data)
 
         try:
-            # 2. IA - Pedimos el informe (Llama a tu AIService anterior)
+            # 2. IA
             response = await self.ai.pedir_informe(json.dumps(payload_data))
             raw_content = response.choices[0].message.content
-            
-            # 3. Parsear JSON (manejando si la IA devuelve bloques ```json)
+
+            # 3. Parsear JSON
             try:
                 dict_resultado = json.loads(raw_content)
             except json.JSONDecodeError:
                 clean_json = raw_content.replace("```json", "").replace("```", "").strip()
-                dict_resultado = json.loads(clean_json)
 
-            # Aseguramos que dict_resultado sea un dict (por si la IA devolvió una lista)
+                # Extraer solo el bloque JSON con regex por si la IA agrega texto extra
+                match = re.search(r'\{.*\}', clean_json, re.DOTALL)
+                if match:
+                    clean_json = match.group(0)
+
+                try:
+                    dict_resultado = json.loads(clean_json)
+                except json.JSONDecodeError as e:
+                    print(f"!!! RAW CONTENT DE LA IA:\n{raw_content}")
+                    raise ValueError(f"La IA devolvió JSON inválido: {e}")
+
             if isinstance(dict_resultado, list) and len(dict_resultado) > 0:
                 dict_resultado = dict_resultado[0]
 
-            # 4. Mapear a la estructura final requerida por el backend
-            # Extraemos los datos de la respuesta de la IA (dict_resultado)
+            # 4. Mapear respuesta
             respuesta_backend = {
-                "analisis_id": str(analisis.id),
+                "analisis_id": analisis.id,
                 "status": "COMPLETADO",
                 "resultado": {
                     "Proyecto": dict_resultado.get("Proyecto", "N/A"),
@@ -50,25 +61,25 @@ class AuditService:
                 }
             }
 
-            # 5. Guardar en DB (usamos el dict original o el mapeado según tu preferencia)
+            # 5. Guardar en DB
             self.uow.llm.registrar_resultado_y_tokens(
-                analisis.id, 
-                respuesta_backend["resultado"], 
+                analisis.id,
+                respuesta_backend["resultado"],
                 {
-                    'm': response.model, 
-                    'tp': response.usage.prompt_tokens, 
-                    'tr': response.usage.completion_tokens
+                    'm': response.model,
+                    'tp': response.usage.prompt_tokens,
+                    'tr': response.usage.completion_tokens,
+                    'prompt': payload_data
                 }
             )
-            
-            self.uow.audits.actualizar_estado(analisis.id, "COMPLETADO")
-            self.uow.commit() 
-            
+
+            self.uow.audits.actualizar_estado(analisis.id, EstadoAnalisis.COMPLETADO)
+            self.uow.commit()
+
             return respuesta_backend
 
         except Exception as e:
             self.uow.rollback()
-            # Si algo falla, el status cambia a ERROR
-            self.uow.audits.actualizar_estado(analisis.id, "ERROR", error_msg=str(e))
+            self.uow.audits.actualizar_estado(analisis.id, EstadoAnalisis.ERROR, error_msg=str(e))
             self.uow.commit()
             raise e
