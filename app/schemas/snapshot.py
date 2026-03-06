@@ -67,7 +67,7 @@ class SnapshotCreate(BaseModel):
     project: Project
     periodo: Periodo
     etapas: Etapa
-    registros_avance: RegistroAvance
+    registros_avance: List[RegistroAvance]
     medidas_seguridad: MedidasSeguridad
     validaciones_tecnicas: ValidacionTecnica
 
