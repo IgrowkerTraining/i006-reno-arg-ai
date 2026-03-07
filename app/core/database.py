@@ -1,24 +1,35 @@
 from sqlalchemy import create_engine
-from sqlalchemy.orm import sessionmaker, declarative_base
+from sqlalchemy.orm import sessionmaker, DeclarativeBase, Session
+
 from app.core.config import settings
 
-# 1. Configuración del Motor
-# pool_pre_ping asegura que la conexión sea válida antes de usarla
+
+# ─── Base declarativa (SQLAlchemy 2.0) ───────────────────────────────────────
+class Base(DeclarativeBase):
+    pass
+
+
+# ─── Motor ────────────────────────────────────────────────────────────────────
+# pool_pre_ping valida la conexión antes de usarla, evitando errores por
+# conexiones que el servidor de BD cerró por inactividad.
 engine = create_engine(
-    settings.DATABASE_URL, 
-    pool_pre_ping=True
+    settings.DATABASE_URL,
+    pool_pre_ping=True,
+    pool_size=settings.DB_POOL_SIZE,
+    max_overflow=settings.DB_MAX_OVERFLOW,
 )
 
-# 2. Generador de Sesiones
+# ─── Generador de sesiones ────────────────────────────────────────────────────
 SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
 
-# 3. Base para los modelos
-Base = declarative_base()
 
-# 4. Dependencia de FastAPI
-def get_db():
+# ─── Dependencia de FastAPI ───────────────────────────────────────────────────
+def get_db() -> Session:
     db = SessionLocal()
     try:
         yield db
+    except Exception:
+        db.rollback()
+        raise
     finally:
         db.close()

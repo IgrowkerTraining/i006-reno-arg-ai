@@ -1,20 +1,31 @@
 from sqlalchemy import Column, String, Integer, Boolean, ForeignKey
-from sqlalchemy.dialects.postgresql import JSON  # Requerido para datos estructurados
-from app.core.database import Base
+from sqlalchemy.dialects.postgresql import JSON
+from sqlalchemy.orm import relationship
+from sqlalchemy.dialects.postgresql import UUID
+import uuid
+
+from app.core.database import Base  # ruta unificada para todos los modelos
+
 
 class InvocacionLLM(Base):
     __tablename__ = "invocaciones_llm"
-    id = Column(Integer, primary_key=True, index=True)
-    analisis_id = Column(Integer, ForeignKey("analisis.id"))
-    modelo_usado = Column(String)
-    tokens_prompt = Column(Integer)
-    tokens_respuesta = Column(Integer)
-    exitosa = Column(Boolean)
+
+    id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    analisis_id = Column(UUID(as_uuid=True), ForeignKey("analisis.id", ondelete="CASCADE"), nullable=False, unique=True)
+    modelo_usado = Column(String, nullable=False)
+    tokens_prompt = Column(Integer, nullable=False)
+    tokens_respuesta = Column(Integer, nullable=False)
+    exitosa = Column(Boolean, nullable=False)
     prompt_enviado = Column(JSON, nullable=True)
+
+    analisis = relationship("Analisis", back_populates="invocaciones")
+
 
 class ResultadoAnalisis(Base):
     __tablename__ = "resultados_analisis"
-    id = Column(Integer, primary_key=True, index=True)
-    analisis_id = Column(Integer, ForeignKey("analisis.id"))
-    # Cambiamos resumen_general (Text) por datos_informe (JSON)
-    datos_informe = Column(JSON)
+
+    id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    analisis_id = Column(UUID(as_uuid=True), ForeignKey("analisis.id", ondelete="CASCADE"), nullable=False, unique=True)
+    datos_informe = Column(JSON, nullable=False)
+
+    analisis = relationship("Analisis", back_populates="resultado")
