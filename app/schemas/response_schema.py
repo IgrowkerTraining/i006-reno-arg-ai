@@ -1,10 +1,6 @@
 from pydantic import BaseModel, ConfigDict, Field
 from app.models.enums_model import EstadoAnalisis
-
-class SeccionInforme(BaseModel):
-    """Estructura para secciones del informe que la IA devuelve con estado y observaciones."""
-    estado: str
-    observaciones: list[str]
+from uuid import UUID
 
 
 class DetalleResultado(BaseModel):
@@ -14,16 +10,16 @@ class DetalleResultado(BaseModel):
     periodo: str = Field(alias="periodo_analizado")
     fecha: str = Field(alias="fecha_generacion")
     resumen: str = Field(alias="resumen_general")
-    ejecucion: SeccionInforme = Field(alias="ejecucion_planificacion")
-    seguridad: SeccionInforme = Field(alias="seguridad_cumplimiento")
-    validaciones: SeccionInforme = Field(alias="validaciones_tecnicas")
+    ejecucion: str = Field(alias="ejecucion_planificacion")
+    seguridad: str = Field(alias="seguridad_cumplimiento")
+    validaciones: str = Field(alias="validaciones_tecnicas")
     observacion: str = Field(alias="observacion_general")
 
     model_config = ConfigDict(populate_by_name=True)
 
 
 class AnalisisResponse(BaseModel):
-    analisis_id: int
+    analisis_id: UUID
     status: EstadoAnalisis
     resultado: DetalleResultado
 

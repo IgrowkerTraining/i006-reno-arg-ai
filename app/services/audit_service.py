@@ -6,6 +6,7 @@ from datetime import datetime, timezone
 from app.models import EstadoAnalisis
 from app.repositories import UnitOfWork
 from .ai_service import AIService
+from uuid import UUID
 
 
 logger = logging.getLogger(__name__)
@@ -24,10 +25,10 @@ class AuditService:
         analisis = self._registrar_analisis_inicial(payload)
 
         try:
-            dict_resultado = await self._obtener_resultado_ia(payload)
+            dict_resultado, response_meta = await self._obtener_resultado_ia(payload)
             respuesta_backend = self._mapear_resultado(analisis.id, dict_resultado)
 
-            self._persistir_resultado(analisis.id, respuesta_backend["resultado"], payload)
+            self._persistir_resultado(analisis.id, respuesta_backend["resultado"], payload, response_meta)
             self.uow.audits.actualizar_estado(analisis.id, EstadoAnalisis.COMPLETADO)
             self.uow.commit()
 
@@ -45,14 +46,14 @@ class AuditService:
         """Crea el registro de análisis y guarda el snapshot del payload."""
         analisis = self.uow.audits.crear(
             payload.project.codigo,
-            # payload.periodo.desde,
-            # payload.periodo.hasta,
+            payload.periodo.desde,
+            payload.periodo.hasta,
         )
         payload_data = payload.model_dump(mode="json")
         self.uow.snapshots.guardar(analisis.id, payload_data)
         return analisis
 
-    async def _obtener_resultado_ia(self, payload) -> dict:
+    async def _obtener_resultado_ia(self, payload) -> tuple[dict, object]:
         """Llama al servicio de IA y retorna el resultado como diccionario."""
         payload_data = payload.model_dump(mode="json")
         response = await self.ai_service.pedir_informe(json.dumps(payload_data))
@@ -64,7 +65,7 @@ class AuditService:
         if isinstance(dict_resultado, list) and len(dict_resultado) > 0:
             dict_resultado = dict_resultado[0]
 
-        return dict_resultado
+        return dict_resultado, response
 
     def _parsear_json_respuesta(self, raw_content: str) -> dict:
         """
@@ -90,29 +91,30 @@ class AuditService:
             logger.error("Respuesta inválida de la IA:\n%s", raw_content)
             raise ValueError(f"La IA devolvió JSON inválido: {e}") from e
 
-    def _mapear_resultado(self, analisis_id: int, dict_resultado: dict) -> dict:
+    def _mapear_resultado(self, analisis_id: UUID, dict_resultado: dict) -> dict:
         """Construye el diccionario de respuesta a partir del resultado de la IA."""
+        print(dict_resultado)
         fecha_generacion = datetime.now(timezone.utc).strftime("%Y-%m-%d")
 
         return {
             "analisis_id": analisis_id,
             "status": "COMPLETADO",
             "resultado": {
-                "Proyecto": dict_resultado.get("Proyecto", "N/A"),
-                "Período analizado": dict_resultado.get("Período analizado", "N/A"),
-                "Fecha de generación": fecha_generacion,
-                "Resumen general del estado de la obra": dict_resultado.get("Resumen general del estado de la obra", ""),
-                "Ejecución y planificación": dict_resultado.get("Ejecución y planificación", ""),
-                "Medidas de seguridad y cumplimiento": dict_resultado.get("Medidas de seguridad y cumplimiento", ""),
-                "Validaciones técnicas": dict_resultado.get("Validaciones técnicas", ""),
-                "Observación general": dict_resultado.get("Observación general", ""),
+                "proyecto": dict_resultado.get("Proyecto", "N/A"),
+                "periodo_analizado": dict_resultado.get("Período analizado", "N/A"),
+                "fecha_generacion": fecha_generacion,
+                "resumen_general": dict_resultado.get("Resumen general del estado de la obra", ""),
+                "ejecucion_planificacion": dict_resultado.get("Ejecución y planificación", ""),
+                "seguridad_cumplimiento": dict_resultado.get("Medidas de seguridad y cumplimiento", ""),
+                "validaciones_tecnicas": dict_resultado.get("Validaciones técnicas", ""),
+                "observacion_general": dict_resultado.get("Observación general", ""),
             },
         }
 
-    def _persistir_resultado(self, analisis_id: int, resultado: dict, payload) -> None:
+    def _persistir_resultado(self, analisis_id: UUID, resultado: dict, payload, response_meta) -> None:
         """Registra el resultado y los tokens de la invocación en la base de datos."""
+        # print(response_meta)
         payload_data = payload.model_dump(mode="json")
-        response_meta = payload._last_ai_response  # se asume guardado en _obtener_resultado_ia
 
         self.uow.llm.registrar_resultado_y_tokens(
             analisis_id,
@@ -125,7 +127,7 @@ class AuditService:
             },
         )
 
-    def _manejar_error(self, analisis_id: int, error: Exception) -> None:
+    def _manejar_error(self, analisis_id: UUID, error: Exception) -> None:
         """
         Deshace la transacción fallida y registra el estado de error del análisis
         en una transacción separada para no perder la trazabilidad.

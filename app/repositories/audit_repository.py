@@ -8,11 +8,11 @@ class AuditRepository(BaseRepository[Analisis]):
         super().__init__(db, Analisis)
         
 # def crear(self, proyecto_codigo: str, desde, hasta) -> Analisis:
-    def crear(self, proyecto_codigo: str) -> Analisis:
+    def crear(self, proyecto_codigo: str, desde, hasta) -> Analisis:
         analisis = Analisis(
             proyecto_codigo=proyecto_codigo,
-            # periodo_desde=desde,
-            # periodo_hasta=hasta,
+            periodo_desde=desde,
+            periodo_hasta=hasta,
         )
         self.db.add(analisis)
         self.db.flush()
