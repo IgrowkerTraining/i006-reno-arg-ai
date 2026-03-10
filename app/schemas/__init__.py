@@ -1,5 +1,5 @@
-from .response_schema import AnalisisResponse
-from .body_schema import BodyBase
-from .prompt_schema import PromptSchema
+from .response import AnalisisResponse
+from .body import BodyBase
+from .prompt import PromptSchema
 
 __all__ = [ "AnalisisResponse", "BodyBase", "PromptSchema"]

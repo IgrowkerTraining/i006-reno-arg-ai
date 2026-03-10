@@ -1,6 +1,6 @@
 from pydantic import BaseModel
 from typing import Optional, Union
-from .body_schema import BodyBase
+from .body import BodyBase
 
 
 class SystemMessage(BaseModel):

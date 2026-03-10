@@ -1,6 +1,6 @@
 from typing import Optional
 from app.models import Analisis, EstadoAnalisis
-from .base_repository import BaseRepository
+from .base import BaseRepository
 
 
 class AuditRepository(BaseRepository[Analisis]):

@@ -6,7 +6,7 @@ import locale
 
 from app.models import EstadoAnalisis
 from app.repositories import UnitOfWork
-from .ai_service import AIService
+from .ai import AIService
 from uuid import UUID
 
 
@@ -164,6 +164,8 @@ class AuditService:
             "Por favor, devuelve nuevamente el JSON completo incluyendo todos los campos, "
             "asegurándote de que cada uno tenga contenido real y detallado."
         )
+
+        print("haciendo nuevamente la consulta a la ia")
 
         return historial + [
             {"role": "assistant", "content": respuesta_anterior},

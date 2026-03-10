@@ -6,7 +6,7 @@ from sqlalchemy.dialects.postgresql import UUID
 import uuid
 
 from app.core.database import Base  # ruta unificada para todos los modelos
-from .enums_model import EstadoAnalisis
+from .enums import EstadoAnalisis
 
 
 class Analisis(Base):

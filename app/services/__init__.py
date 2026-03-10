@@ -1,5 +1,5 @@
-from .ai_service import AIService
-from .audit_service import AuditService
+from .ai import AIService
+from .audit import AuditService
 
 # Exportamos las clases para que se importen como: 
 # from app.services import AuditService

@@ -1,5 +1,5 @@
 from pydantic import BaseModel, ConfigDict, Field
-from app.models.enums_model import EstadoAnalisis
+from app.models.enums import EstadoAnalisis
 from uuid import UUID
 
 

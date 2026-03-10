@@ -1,5 +1,5 @@
 from app.models import SnapshotRecibido
-from .base_repository import BaseRepository
+from .base import BaseRepository
 
 
 class SnapshotRepository(BaseRepository[SnapshotRecibido]):

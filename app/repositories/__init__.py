@@ -1,8 +1,8 @@
 from sqlalchemy.orm import Session
 
-from .audit_repository import AuditRepository
-from .snapshot_repository import SnapshotRepository
-from .llm_repository import LLMRepository
+from .audit import AuditRepository
+from .snapshot import SnapshotRepository
+from .llm import LLMRepository
 
 
 class UnitOfWork:
