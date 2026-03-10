@@ -1,7 +1,8 @@
 import re
 import json
 import logging
-from datetime import datetime, timezone
+from datetime import datetime, timezone, date
+import locale
 
 from app.models import EstadoAnalisis
 from app.repositories import UnitOfWork
@@ -11,6 +12,23 @@ from uuid import UUID
 
 logger = logging.getLogger(__name__)
 
+CAMPOS_REQUERIDOS = [
+    "Proyecto",
+    "Período analizado",
+    "Resumen general del estado de la obra",
+    "Ejecución y planificación",
+    "Medidas de seguridad y cumplimiento",
+    "Validaciones técnicas",
+    "Observación general",
+]
+
+MAX_REINTENTOS = 2
+
+MESES_ES = {
+    1: "Enero", 2: "Febrero", 3: "Marzo", 4: "Abril",
+    5: "Mayo", 6: "Junio", 7: "Julio", 8: "Agosto",
+    9: "Septiembre", 10: "Octubre", 11: "Noviembre", 12: "Diciembre",
+}
 
 class AuditService:
     def __init__(self, uow: UnitOfWork, ai_service: AIService) -> None:
@@ -54,18 +72,103 @@ class AuditService:
         return analisis
 
     async def _obtener_resultado_ia(self, payload) -> tuple[dict, object]:
-        """Llama al servicio de IA y retorna el resultado como diccionario."""
+        """
+        Llama al servicio de IA, valida los campos requeridos y, si hay campos
+        faltantes o vacíos, reintenta hasta MAX_REINTENTOS veces enviándole
+        a la IA exactamente qué campos debe completar.
+        """
         payload_data = payload.model_dump(mode="json")
-        response = await self.ai_service.pedir_informe(json.dumps(payload_data))
-        raw_content = response.choices[0].message.content
+        data_json = json.dumps(payload_data)
 
-        dict_resultado = self._parsear_json_respuesta(raw_content)
+        # Construye el historial inicial y lo reutiliza en cada reintento
+        historial = self.ai_service.construir_mensajes_iniciales(data_json)
 
-        # La IA a veces devuelve una lista con un único elemento
-        if isinstance(dict_resultado, list) and len(dict_resultado) > 0:
-            dict_resultado = dict_resultado[0]
+        response = await self.ai_service.pedir_informe(data_json)
+        intentos = 0
 
-        return dict_resultado, response
+        while True:
+            # Verifica que choices no venga vacío
+            if not response.choices:
+                raise ValueError("La IA no devolvió ninguna opción de respuesta (choices vacío).")
+
+            raw_content = response.choices[0].message.content
+
+            # Verifica que el contenido no sea None ni cadena vacía
+            if not raw_content or not raw_content.strip():
+                raise ValueError("La IA devolvió una respuesta vacía o nula.")
+
+            dict_resultado = self._parsear_json_respuesta(raw_content)
+
+            # Si es lista, verifica que no esté vacía antes de extraer el primer elemento
+            if isinstance(dict_resultado, list):
+                if len(dict_resultado) == 0:
+                    raise ValueError("La IA devolvió una lista vacía como resultado.")
+                dict_resultado = dict_resultado[0]
+
+            # Verifica que el resultado sea un dict y no esté vacío
+            if not isinstance(dict_resultado, dict) or not dict_resultado:
+                raise ValueError(
+                    f"La IA devolvió un resultado con formato inesperado o vacío: {type(dict_resultado)}"
+                )
+
+            # Detecta campos faltantes o vacíos
+            campos_faltantes = self._detectar_campos_faltantes(dict_resultado)
+
+            if not campos_faltantes:
+                # Todo OK — sale del loop
+                self._validar_periodo_analizado(dict_resultado, payload)
+                return dict_resultado, response
+
+            # Si ya se agotaron los reintentos, lanza error
+            if intentos >= MAX_REINTENTOS:
+                raise ValueError(
+                    f"La IA no completó los campos requeridos luego de {MAX_REINTENTOS} reintentos. "
+                    f"Campos faltantes: {campos_faltantes}"
+                )
+
+            # Construye el mensaje de corrección y reintenta
+            intentos += 1
+            logger.warning(
+                "Reintento %d/%d — campos faltantes o vacíos: %s",
+                intentos,
+                MAX_REINTENTOS,
+                campos_faltantes,
+            )
+
+            historial = self._agregar_turno_correccion(historial, raw_content, campos_faltantes)
+            response = await self.ai_service.pedir_correccion(historial)
+
+    def _detectar_campos_faltantes(self, dict_resultado: dict) -> list[str]:
+        """Retorna la lista de campos requeridos que están ausentes o vacíos."""
+        return [
+            campo
+            for campo in CAMPOS_REQUERIDOS
+            if not dict_resultado.get(campo) or not str(dict_resultado[campo]).strip()
+        ]
+
+    def _agregar_turno_correccion(
+        self,
+        historial: list[dict],
+        respuesta_anterior: str,
+        campos_faltantes: list[str],
+    ) -> list[dict]:
+        """
+        Extiende el historial con la respuesta anterior de la IA y un nuevo mensaje
+        de usuario indicando exactamente qué campos deben ser completados.
+        """
+        campos_formateados = "\n".join(f'  - "{campo}"' for campo in campos_faltantes)
+        mensaje_correccion = (
+            "Tu respuesta anterior está incompleta. "
+            "Los siguientes campos están ausentes o tienen contenido vacío:\n"
+            f"{campos_formateados}\n\n"
+            "Por favor, devuelve nuevamente el JSON completo incluyendo todos los campos, "
+            "asegurándote de que cada uno tenga contenido real y detallado."
+        )
+
+        return historial + [
+            {"role": "assistant", "content": respuesta_anterior},
+            {"role": "user", "content": mensaje_correccion},
+        ]
 
     def _parsear_json_respuesta(self, raw_content: str) -> dict:
         """
@@ -93,7 +196,6 @@ class AuditService:
 
     def _mapear_resultado(self, analisis_id: UUID, dict_resultado: dict) -> dict:
         """Construye el diccionario de respuesta a partir del resultado de la IA."""
-        print(dict_resultado)
         fecha_generacion = datetime.now(timezone.utc).strftime("%Y-%m-%d")
 
         return {
@@ -113,7 +215,6 @@ class AuditService:
 
     def _persistir_resultado(self, analisis_id: UUID, resultado: dict, payload, response_meta) -> None:
         """Registra el resultado y los tokens de la invocación en la base de datos."""
-        # print(response_meta)
         payload_data = payload.model_dump(mode="json")
 
         self.uow.llm.registrar_resultado_y_tokens(
@@ -145,3 +246,28 @@ class AuditService:
                 "No se pudo registrar el estado de error para el análisis %s",
                 analisis_id,
             )
+    
+    def _validar_periodo_analizado(self, dict_resultado: dict, payload) -> None:
+        """
+        Verifica que el 'Período analizado' devuelto por la IA
+        coincida con el rango de fechas del payload.
+        """
+        desde: date = payload.periodo.desde   # ya es un objeto date por Pydantic
+        hasta: date = payload.periodo.hasta
+
+        # Construye el string esperado, ej: "Abril 2026"
+        if desde.month != hasta.month or desde.year != hasta.year:
+            # Si el período abarca más de un mes, salteamos la validación estricta
+            return
+
+        esperado = f"{MESES_ES[desde.month]} {desde.year}"
+        recibido = dict_resultado.get("Período analizado", "").strip()
+
+        if recibido.lower() != esperado.lower():
+            raise ValueError(
+                f"El período analizado no coincide. "
+                f"Esperado: '{esperado}', recibido: '{recibido}'."
+            )
+        else:
+            print("Los periodos coinciden")
+            print(esperado + " - " + recibido)

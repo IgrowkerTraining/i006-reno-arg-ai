@@ -58,10 +58,32 @@ class AIService:
 
         return AIService._prompt_cache
 
+    def construir_mensajes_iniciales(self, data_json: str) -> list[dict]:
+        """Arma el historial inicial con el system prompt y el payload del usuario."""
+        return [
+            {"role": "system", "content": self._get_instructions()},
+            {"role": "user", "content": data_json},
+        ]
+
     async def pedir_informe(self, data_json: str) -> ChatCompletion:
         """
         Envía el payload a la IA iterando por los modelos disponibles en orden.
         Si todos fallan, lanza un RuntimeError con el último error como causa.
+        """
+        mensajes = self.construir_mensajes_iniciales(data_json)
+        return await self._completar(mensajes)
+
+    async def pedir_correccion(self, historial: list[dict]) -> ChatCompletion:
+        """
+        Reenvía a la IA un historial de mensajes completo (multi-turn),
+        incluyendo la respuesta anterior y el mensaje de corrección.
+        """
+        return await self._completar(historial)
+
+    async def _completar(self, mensajes: list[dict]) -> ChatCompletion:
+        """
+        Método base: itera por los modelos disponibles y retorna
+        la primera respuesta exitosa. Si todos fallan, lanza RuntimeError.
         """
         last_error: Exception | None = None
 
@@ -70,10 +92,7 @@ class AIService:
                 logger.info("Intentando con modelo: %s", modelo)
                 response = await self.client.chat.completions.create(
                     model=modelo,
-                    messages=[
-                        {"role": "system", "content": self._get_instructions()},
-                        {"role": "user", "content": data_json},
-                    ],
+                    messages=mensajes,
                     temperature=settings.DEFAULT_TEMPERATURE,
                 )
                 logger.info("Respuesta exitosa con modelo: %s", modelo)
