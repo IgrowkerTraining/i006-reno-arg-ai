@@ -11,10 +11,9 @@ logger = logging.getLogger(__name__)
 
 FALLBACK_MODELS: list[str] = [
     settings.DEFAULT_MODEL,
-    "mistralai/mistral-small-3.1-24b-instruct:free",
-    "meta-llama/llama-3.3-70b-instruct:free",
-    "google/gemini-2.5-pro-exp-03-25:free",
-    "deepseek/deepseek-r1:free",
+    "deepseek/deepseek-chat"
+    "mistralai/mistral-small",
+    "meta-llama/llama-3.1-8b-instruct",
 ]
 
 
