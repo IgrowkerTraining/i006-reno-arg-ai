@@ -10,6 +10,7 @@ class EstadoEtapa(str, Enum):
     EN_CURSO = "EN_CURSO"
     FINALIZADA = "FINALIZADA"
     PENDIENTE = "PENDIENTE"
+    APROBADO = "APROBADO"
 
 
 class Project(BaseModel):
