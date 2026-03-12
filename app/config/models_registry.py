@@ -1,4 +1,5 @@
 AVAILABLE_MODELS = [
+    "deepseek/deepseek-chat",
     "google/gemma-3-27b-it:free",
     "meta-llama/llama-3.3-70b-instruct:free",
     "mistralai/mistral-small-3.1-24b-instruct:free",
